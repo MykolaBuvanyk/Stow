@@ -10,7 +10,7 @@ registers.
 
 ## Local development
 
-Requirements: Node.js 20+, Docker, and npm.
+Requirements: Node.js 22+, Docker, and npm.
 
 ```bash
 npm ci
