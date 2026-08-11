@@ -1,34 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stow
 
-## Getting Started
+Private file storage built with Next.js and Supabase. Authenticated users can
+upload validated PDF/JPEG/PNG files, download their files, share them with an
+exact email address, revoke access, and delete files.
 
-First, run the development server:
+Share requests do not reveal whether an email is already registered. A request
+for a future user stays pending and is activated automatically when that email
+registers.
+
+## Local development
+
+Requirements: Node.js 20+, Docker, and npm.
+
+```bash
+npm ci
+npx supabase start
+cp .env.example .env.local
+```
+
+Fill `.env.local` with the values from `npx supabase status -o env`:
+
+- `API_URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- `ANON_KEY` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SERVICE_ROLE_KEY` → `SUPABASE_SERVICE_ROLE_KEY`
+- generate a random `CRON_SECRET` of at least 32 characters
+
+Then run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Verification
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+npm run lint
+npm run typecheck
+npx supabase db lint --local
+npm run test:e2e
+npm run build
+```
 
-## Learn More
+Playwright starts the Next.js development server automatically. Local Supabase
+must already be running.
 
-To learn more about Next.js, take a look at the following resources:
+## Maintenance sweep
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`GET /api/maintenance/sweep` accepts only
+`Authorization: Bearer <CRON_SECRET>`. It atomically leases at most 50 stale
+records, tombstones unfinished uploads, removes Storage objects, and then
+hard-deletes the database rows. Failed records are released for retry; abandoned
+leases become eligible again after 15 minutes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Vercel invokes the endpoint daily at 03:00 UTC using [vercel.json](./vercel.json).
+Set `CRON_SECRET` in the Vercel production environment so it is attached to cron
+requests automatically.
 
-## Deploy on Vercel
+The same sweep removes expired distributed rate-limit counters. Application
+endpoints are rate-limited per authenticated user and, when a trusted proxy IP
+is available, per IP. Upload reservations are additionally limited to five
+active pending files and 1 GiB of stored/reserved data per owner.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Security baseline
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Cookie-authenticated mutations require an exact same-origin request (or an exact
+same-origin Referer fallback) and the `X-Stow-Request` marker added by the client
+API adapter. The app applies a nonce-based CSP, clickjacking protection,
+`nosniff`, a restrictive referrer policy, and a permissions policy globally.
+
+## CI
+
+The GitHub Actions workflow runs unit tests, ESLint, TypeScript, a production
+build, a clean local Supabase stack, database lint, and Chromium E2E tests.

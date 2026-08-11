@@ -1,6 +1,7 @@
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 export const FILE_SIGNATURE_READ_BYTES = 8 * 1024;
 export const SIGNED_DOWNLOAD_TTL_SECONDS = 60;
+export const MAX_FILE_SHARES = 100;
 
 export const ALLOWED_FILE_TYPES = {
   "application/pdf": ["pdf"],
@@ -17,3 +18,7 @@ export const ALLOWED_MIME_TYPES = Object.freeze(
 export const ALLOWED_FILE_EXTENSIONS = Object.freeze(
   Object.values(ALLOWED_FILE_TYPES).flat(),
 );
+
+export function isAllowedFileType(value: string): value is AllowedFileType {
+  return ALLOWED_MIME_TYPES.includes(value as AllowedFileType);
+}
