@@ -11,7 +11,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "supabase:types": "supabase gen types typescript --local > src/server/infrastructure/supabase/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
